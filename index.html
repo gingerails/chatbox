@@ -1,0 +1,103 @@
+<html>
+<head>
+  <body>
+    <script>
+function sendRequest(destinationUrl, callbackFunction, parameters){
+  var xmlHttp = new XMLHttpRequest();
+  xmlHttp.onreadystatechange = function() {
+    if (xmlHttp.readyState == 4) {
+      console.log("The response received was:\n" + xmlHttp.responseText);
+      var result = JSON.parse(xmlHttp.responseText);
+      if (result.error) {
+        document.getElementById("error").innerHTML = result.error;
+      } else {
+        callbackFunction(result);
+      }
+    }
+  }
+  var paramString = "";
+  for (var param in parameters) {
+    paramString += param + "=" + escape(parameters[param]) + "&";
+  }
+
+  xmlHttp.open("POST", destinationUrl);
+  xmlHttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  console.log("About to send: " + paramString);
+  console.log("We are sending to " + destinationUrl);
+  xmlHttp.send(paramString);
+}
+
+function getUser(){
+  sendRequest("/user", function(result) {
+    if (result.user){
+      handleLoad();
+    } else {
+      sendRequest("/login", function(result) {
+        var loginLink = '<a href=' + result.url + ">Click Here to Logi In </a>";
+        document.getElementById("messagearea").innerHTML = loginLink;
+      }, new Object());
+
+    }
+  }, new Object());
+}
+
+function handleLoad() {
+  sendRequest("/messages", function(result) {
+    var messageText = '';
+    for (var i = 0; i < result.messages.length; i++){
+      messageText += '<div class="message">';
+      var email = result.messages[i].email;
+      var remoi = "@gmail.com"
+      if (email.endsWith(remoi)) {
+        email = email.substring(0, email.length - remoi.length);
+      }
+      messageText += '<span class="messageemail"> ' + result.messages[i].email + ' </span>';
+      messageText += " said at ";
+      messageText += '<span class="messagetime"> ' + result.messages[i].time + ' </span>';
+      messageText += '<span class="messagetext"> ' + result.messages[i].text + ' </span>';
+      messageText += '</div>';
+    }
+    document.getElementById("messagearea").innerHTML = messageText;
+  }, new Object());
+}
+
+function handleSend(){
+  var parameters = new Object();
+  parameters["text"] = document.getElementById("textfield").value;
+  sendRequest("/add", function(result) {
+    document.getElementById("textfield").value = "";
+    handleLoad();
+  }, parameters);
+}
+getUser();
+setInterval(handleLoad, 50000);
+    </script>
+    <style>
+    .messageemail{
+      font-weight: bold
+    }
+    .messagetext {
+      display: block;
+    }
+    #messagearea {
+      font-family: Tahoma;
+      font-size: 8pt;
+      padding: 10px;
+      border: 3px solid #000000;
+      margin-top: 5px;
+    }
+    .message {
+      background-color: lightblue;
+      margin: 5px;
+      padding: 3px;
+      padding-left: 10px
+      padding: 10px
+    }
+    </style>
+  </head>
+  </body>
+    <input type="button" onclick="handleLoad();" value = "Load Messages">
+    <input id="textfield"><input type="button" value="Send Message" onclick="handleSend();">
+    <div id="messagearea">
+    </div>
+</html>
